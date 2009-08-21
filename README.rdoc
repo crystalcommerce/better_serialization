@@ -1,10 +1,9 @@
-Faster, Smaller, Gzip-able
-===================
+=== Faster, Smaller, Gzip-able
+
 
 This adds +marshal_serialize+ and +json_serialize+ to ActiveRecord::Base (class methods), which act similar to rails' own +serialize+ except they don't use yaml, which is slooooow and biiiiig (byte-wise). Also supports adding gzip to the serialization process for really large stuff (can save a ton of database memory with minimal added insert time). Note that gzip columns must be of type "binary", "blob", etc (not text).
 
-Example
-=======
+=== Example
 
 see tests, but here's the gist:
 
@@ -21,8 +20,7 @@ see tests, but here's the gist:
     order_log.product_cache # => normal
     order_log[:product_cache] # => raw Marshal.dump of product
     
-The Problem With YAML Serialization: speed and size
-===================================================
+=== The Problem With YAML Serialization: speed and size
 
 [NOTE: this code does not represent the BetterSerialization api, but rather the underlying ideas]
 
@@ -81,8 +79,7 @@ So on this machine it would add 30ms on insert and 5ms on load, but save ~1mb of
 
 [EDIT: Also note that from personal experience, gzipping json will still use 1/10th the overall space with ~.5ms performance hit - WIN]
 
-Summary
-=======
+=== Summary
 
 If you want speed/small data and don't need to flash-freeze the whole object, use json. Otherwise, use Marshal. If you want to use minimal database space, add gzip to those (adds a relatively small performance hit). Use the default yaml if you really, really *need* to save the whole object and also have a more human-readable datastore... eh, actually, don't use yaml.
 
