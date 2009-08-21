@@ -1,7 +1,7 @@
 Faster, Smaller, Gzip-able
 ===================
 
-This adds +marshal_serialize+ and +json_serialize+ to ActiveRecord::Base (class methods), which act similar to rails' own +serialize+ except they don't use yaml, which is slooooow and biiiiig (byte-wise). Also supports adding gzip to the serialization process for really large stuff (can save a ton of database memory with ~30ms added insert time). Note that gzip columns must be of type "binary", "blob", etc (not text).
+This adds +marshal_serialize+ and +json_serialize+ to ActiveRecord::Base (class methods), which act similar to rails' own +serialize+ except they don't use yaml, which is slooooow and biiiiig (byte-wise). Also supports adding gzip to the serialization process for really large stuff (can save a ton of database memory with minimal added insert time). Note that gzip columns must be of type "binary", "blob", etc (not text).
 
 Example
 =======
@@ -23,6 +23,8 @@ see tests, but here's the gist:
     
 The Problem With YAML Serialization: speed and size
 ===================================================
+
+[NOTE: this code does not represent the BetterSerialization api, but rather the underlying ideas]
 
 +lis+ is an 18-member array of buylist line items that have misc associations loaded into memory,
 the point being that they're relatively big objects that have resulted from real-world use
@@ -66,7 +68,7 @@ Whammy.
 
 With json you can't just unmarshal it 'cuz it's just representing an attribute array, but even compensating with object creation it's still the fastest.
 
-Finally, if you need Marshal/yaml and want to save some space, you can use gzip with the serialization:
+Finally, if you need to save some space, you can use gzip with the serialization:
 
     >> Benchmark.measure {gz_marshal_data = Zlib::Deflate.deflate(marshal_data)}
     => #<Benchmark::Tms:0x10a7ee54 @utime=0.0300000000000011, @cstime=0.0, @cutime=0.0, @total=0.0300000000000011, @label="", @stime=0.0, @real=0.0292189121246338>
