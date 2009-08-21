@@ -1,0 +1,87 @@
+Faster, Smaller, Gzip-able
+===================
+
+This adds +marshal_serialize+ and +json_serialize+ to ActiveRecord::Base (class methods), which act similar to rails' own +serialize+ except they don't use yaml, which is slooooow and biiiiig (byte-wise). Also supports adding gzip to the serialization process for really large stuff (can save a ton of database memory with ~30ms added insert time). Note that gzip columns must be of type "binary", "blob", etc (not text).
+
+Example
+=======
+
+see tests, but here's the gist:
+
+    class OrderLog < ActiveRecord::Base
+      marshal_serialize :line_items_cache, :gzip => true
+      marshal_serialize :product_cache
+      json_serialize :customer_cache
+    end
+    
+    order_log = OrderLog.new
+    product = Product.new(:name => "Woot")
+    order_log.product_cache = product
+
+    order_log.product_cache # => normal
+    order_log[:product_cache] # => raw Marshal.dump of product
+    
+The Problem With YAML Serialization: speed and size
+===================================================
+
++lis+ is an 18-member array of buylist line items that have misc associations loaded into memory,
+the point being that they're relatively big objects that have resulted from real-world use
+
+    marshal_data, yaml_data, json_data = nil
+
+    Benchmark.bm(7) do |x|
+      x.report("Marshal") { marshal_data = Marshal.dump(lis) }
+      x.report("to_yaml") { yaml_data    = lis.to_yaml       }
+      x.report('to_json') { json_data    = lis.to_json       }
+    end
+
+                 user     system      total        real
+    Marshal  0.590000   0.000000   0.590000 (  0.605567)
+    to_yaml 11.730000   0.010000  11.740000 ( 12.179310)
+    to_json  0.010000   0.000000   0.010000 (  0.006129)
+
+The reason JSON is so fast is that rails' ActiveRecord::Base#to_json only jsonifies the attributes hash, not the actual ruby object. If you want the full object though, Marshal is waaaaay faster than to_yaml, and it *is* representing the full ruby object.
+
+Marshal is also a lot smaller than yaml:
+
+    >> marshal_data.size
+    => 1119279
+    >> yaml_data.size
+    => 1958610
+    >> json_data.size
+    => 7886
+
+Whammy.
+
+    Benchmark.bm(7) do |x|
+      x.report("Marshal") { Marshal.load(marshal_data) }
+      x.report("to_yaml") { YAML::load(yaml_data) }
+      x.report('to_json') { ActiveSupport::JSON.decode(json_data).collect {|hash| BuylistLineItem.new(hash)} }
+    end
+
+                 user     system      total        real
+    Marshal  0.040000   0.000000   0.040000 (  0.046616)
+    to_yaml  0.380000   0.000000   0.380000 (  0.380686)
+    to_json  0.020000   0.000000   0.020000 (  0.019096)
+
+With json you can't just unmarshal it 'cuz it's just representing an attribute array, but even compensating with object creation it's still the fastest.
+
+Finally, if you need Marshal/yaml and want to save some space, you can use gzip with the serialization:
+
+    >> Benchmark.measure {gz_marshal_data = Zlib::Deflate.deflate(marshal_data)}
+    => #<Benchmark::Tms:0x10a7ee54 @utime=0.0300000000000011, @cstime=0.0, @cutime=0.0, @total=0.0300000000000011, @label="", @stime=0.0, @real=0.0292189121246338>
+    >> marshal_data.size - gz_marshal_data.size
+    => 1036979
+    >> Benchmark.measure {Zlib::Inflate.inflate(marshal_data)}
+    => #<Benchmark::Tms:0x10a8db98 @utime=0.0, @cstime=0.0, @cutime=0.0, @total=0.0, @label="", @stime=0.0, @real=0.00509905815124512>
+
+So on this machine it would add 30ms on insert and 5ms on load, but save ~1mb of database space. Seems worth it if you're saving this much stuff.
+
+[EDIT: Also note that from personal experience, gzipping json will still use 1/10th the overall space with ~.5ms performance hit - WIN]
+
+Summary
+=======
+
+If you want speed/small data and don't need to flash-freeze the whole object, use json. Otherwise, use Marshal. If you want to use minimal database space, add gzip to those (adds a relatively small performance hit). Use the default yaml if you really, really *need* to save the whole object and also have a more human-readable datastore... eh, actually, don't use yaml.
+
+Copyright (c) 2009 Woody Peterson, released under the MIT license

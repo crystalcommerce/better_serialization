@@ -1,0 +1,74 @@
+require File.dirname(__FILE__) + '/spec_helper'
+
+describe BetterSerialization do
+  before do
+    @order_log = OrderLog.new
+    @li = LineItem.new
+    @product = Product.new(:name => "Woot", :line_items => [@li])
+    @li.product = @product
+  end
+  
+  describe "json serialization" do
+    before do
+      @customer = Customer.new(:name => "John Spartan")
+      @order_log.customer_cache = @customer
+      @serialized_customer = @customer.to_json
+    end
+    
+    it "serializes the attribute" do
+      @order_log[:customer_cache].should == @serialized_customer
+    end
+    
+    it "deserializes the attribute" do
+      @order_log.customer_cache.attributes.should == @customer.attributes
+    end
+
+    it "works with arrays (and gzip)" do
+      OrderLog.json_serialize :line_items_cache, :class_name => "LineItem", :gzip => true
+      @order_log.line_items_cache = [@li]
+      @serialized_gzip_li = Zlib::Deflate.deflate([@li].to_json)
+
+      @order_log.save
+      @order_log.reload
+      @order_log[:line_items_cache].should == @serialized_gzip_li
+      @order_log.line_items_cache.first.attributes.should == @li.attributes
+
+      OrderLog.marshal_serialize :line_items_cache, :gzip => true
+    end
+  end
+  
+  describe "Marshal serialization" do
+    before do
+      @order_log.product_cache = @product
+      @serialized_product = Marshal.dump(@product)
+    end
+    
+    it "serializes the input of attribute=" do
+      @order_log[:product_cache].should == @serialized_product
+    end
+
+    it "deserializes the input of attribute=" do
+      # can't compare them directly 'cuz they have different object ids
+      @order_log.product_cache.attributes.should == @product.attributes
+    end
+  end
+  
+  describe "Marshal serialization with gzip" do
+    before do
+      @order_log.line_items_cache = [@li]
+      @serialized_gzip_li = Zlib::Deflate.deflate(Marshal.dump([@li]))
+
+      # testing putting binary data in the database
+      @order_log.save
+      @order_log.reload
+    end
+    
+    it "serializes the input of attribute=" do
+      @order_log[:line_items_cache].should == @serialized_gzip_li
+    end
+
+    it "deserializes the input of attribute=" do
+      @order_log.line_items_cache.first.attributes.should == @li.attributes
+    end
+  end
+end
