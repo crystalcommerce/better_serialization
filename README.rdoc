@@ -51,7 +51,7 @@ Marshal is also a lot smaller than yaml:
     >> json_data.size
     => 7886
 
-Whammy.
+Whammy. What about deserialization?
 
     Benchmark.bm(7) do |x|
       x.report("Marshal") { Marshal.load(marshal_data) }
