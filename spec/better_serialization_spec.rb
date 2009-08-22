@@ -35,6 +35,26 @@ describe BetterSerialization do
 
       OrderLog.marshal_serialize :line_items_cache, :gzip => true
     end
+    
+    it "works with ActiveRecord::Base.include_root_in_json == true" do
+      ActiveRecord::Base.include_root_in_json = true
+      
+      @order_log.customer_cache = @customer
+      @serialized_customer = @customer.to_json
+
+      @order_log[:customer_cache].should == @serialized_customer
+      @order_log.customer_cache.attributes.should == @customer.attributes
+    end
+    
+    it "includes :id in serialization" do
+      @customer.save
+      
+      @order_log.customer_cache = @customer
+      @serialized_customer = @customer.to_json
+      
+      @order_log.customer_cache.attributes.should == @customer.attributes
+      @order_log.customer_cache.id.should == @customer.id
+    end
   end
   
   describe "Marshal serialization" do

@@ -3,11 +3,13 @@ require 'spec'
 require 'ruby-debug'
 
 $LOAD_PATH.unshift(File.expand_path(File.dirname(__FILE__)))
- 
+
+
 require 'activerecord'
 require File.dirname(__FILE__) + '/../lib/better_serialization'
 
 RAILS_ENV="test"
+ActiveRecord::Base.logger = Logger.new(StringIO.new) # make it think it has a logger
  
 ActiveRecord::Base.configurations = {
   "test" => {

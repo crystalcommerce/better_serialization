@@ -25,7 +25,7 @@ module BetterSerialization
     
     attrs.each do |attribute|
       define_method "#{attribute}=" do |value|
-        json = value.to_json(:with => :id)
+        json = value.to_json
         json = Zlib::Deflate.deflate(json) if options[:gzip]
         super(json)
       end
@@ -39,8 +39,12 @@ module BetterSerialization
         
         result = []
         attribute_hashes.each do |attr_hash|
-          class_name = options[:class_name] || attribute.to_s.singularize.camelize
-          result << class_name.constantize.new(attr_hash)
+          if ActiveRecord::Base.include_root_in_json
+            class_name = attr_hash.keys.first.camelcase
+            attr_hash = attr_hash.values.first
+          end
+          class_name ||= options[:class_name] || attribute.to_s.singularize.camelize
+          result << class_name.constantize.send(:instantiate, attr_hash)
         end
         
         return decoded.is_a?(Array) ? result : result.first

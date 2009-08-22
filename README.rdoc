@@ -1,6 +1,5 @@
 === Faster, Smaller, Gzip-able
 
-
 This adds +marshal_serialize+ and +json_serialize+ to ActiveRecord::Base (class methods), which act similar to rails' own +serialize+ except they don't use yaml, which is slooooow and biiiiig (byte-wise). Also supports adding gzip to the serialization process for really large stuff (can save a ton of database memory with minimal added insert time). Note that gzip columns must be of type "binary", "blob", etc (not text).
 
 === Example
@@ -19,6 +18,8 @@ see tests, but here's the gist:
 
     order_log.product_cache # => normal
     order_log[:product_cache] # => raw Marshal.dump of product
+
+Also, for json_serialize, if <code>ActiveRecord::Base.include_root_in_json != true</code> for your app (this is the new rails defalut, btw) you will need to use the :class_name option if it's not inferable by the association name, and will probably want modify that class's to_json to include the id. It'll all 'just work' if +include_root_in_json+ is set to true though.
     
 === The Problem With YAML Serialization: speed and size
 
