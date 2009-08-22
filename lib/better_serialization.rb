@@ -12,6 +12,8 @@ module BetterSerialization
       end
       
       define_method attribute do
+        return nil if self[attribute].nil?
+        
         value = Zlib::Inflate.inflate(self[attribute]) if options[:gzip]
         Marshal.load(value || self[attribute])
       end
@@ -23,11 +25,14 @@ module BetterSerialization
     
     attrs.each do |attribute|
       define_method "#{attribute}=" do |value|
-        json = options[:gzip] ? Zlib::Deflate.deflate(value.to_json) : value.to_json
+        json = value.to_json(:with => :id)
+        json = Zlib::Deflate.deflate(json) if options[:gzip]
         super(json)
       end
       
       define_method attribute do
+        return nil if self[attribute].nil?
+        
         json = Zlib::Inflate.inflate(self[attribute]) if options[:gzip]
         decoded = ActiveSupport::JSON.decode(json || self[attribute])
         attribute_hashes = [decoded].flatten
