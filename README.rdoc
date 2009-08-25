@@ -84,4 +84,8 @@ So on this machine it would add 30ms on insert and 5ms on load, but save ~1mb of
 
 If you want speed/small data and don't need to flash-freeze the whole object, use json. Otherwise, use Marshal. If you want to use minimal database space, add gzip to those (adds a relatively small performance hit). Use the default yaml if you really, really *need* to save the whole object and also have a more human-readable datastore... eh, actually, don't use yaml.
 
+=== TODO
+
+* deserialization should be cached, and it would be nice if the deserialized value was stored in the attributes hash.
+
 Copyright (c) 2009 Woody Peterson, released under the MIT license
