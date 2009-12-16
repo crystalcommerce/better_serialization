@@ -49,7 +49,7 @@ module BetterSerialization
         json = options[:gzip] ? Zlib::Inflate.inflate(self[attribute]) : self[attribute]
         decoded = ActiveSupport::JSON.decode(json)
         
-        return decoded if options[:instantiate]
+        return decoded if !options[:instantiate]
         
         attribute_hashes = [decoded].flatten
         
