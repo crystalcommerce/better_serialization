@@ -28,7 +28,10 @@ module BetterSerialization
   # * +:gzip+ - uses gzip before and after serialization. Slight speed hit,
   #   but can save a lot of hard drive space.
   # * +:instantiate+ - if false, it will return the raw decoded json and not attempt to
-  #   instantiate ActiveRecord objects. Defaults to true
+  #   instantiate ActiveRecord objects. Defaults to true.
+  # * +:hash_with_indifferent_access+ - if true, it will return the raw decoded json as
+  #   a hash with indifferent access. This can be handy because json doesn't have a concept
+  #   of symbols, so it gets annoying when you're using a field as a key-value store
   # * +:class_name+ - If ActiveRecord::Base.include_root_in_json is false, you
   #   will need this option so that we can figure out which AR class to instantiate
   #   (not applicable if +raw+ is true)
@@ -49,6 +52,7 @@ module BetterSerialization
         json = options[:gzip] ? Zlib::Inflate.inflate(self[attribute]) : self[attribute]
         decoded = ActiveSupport::JSON.decode(json)
         
+        return decoded.with_indifferent_access if options[:hash_with_indifferent_access]
         return decoded if !options[:instantiate]
         
         attribute_hashes = [decoded].flatten
