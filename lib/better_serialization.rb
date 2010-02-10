@@ -30,7 +30,7 @@ module BetterSerialization
     private
 
     def deserialize(attribute, attribute_hashes)
-      class_name = options[:class_name] || attribe.to_s.singularize.camelize
+      class_name = options[:class_name] || attribute.to_s.singularize.camelize
       attribute_hashes.inject([]) do |result, attr_hash|
         if class_name.blank? || class_included?(class_name)
           class_name = attr_hash.keys.first.camelcase
