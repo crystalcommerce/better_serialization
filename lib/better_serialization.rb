@@ -1,6 +1,54 @@
 require 'zlib'
 
 module BetterSerialization
+  class JsonSerializer
+    attr_reader :options
+
+    def initialize(options)
+      @options = options
+    end
+
+    def to_json(object)
+      serialize_active_record(object)
+    end
+
+    def from_json(attribute)
+      return nil if attribute.nil?
+
+      json = options[:gzip] ? Zlib::Inflate.inflate(attribute) : attribute
+      decoded = ActiveSupport::JSON.decode(json)
+
+      return decoded.with_indifferent_access if options[:hash_with_indifferent_access]
+      return decoded if !options[:instantiate]
+
+      attribute_hashes = [decoded].flatten
+
+      result = []
+      attribute_hashes.each do |attr_hash|
+        result << deserialize_active_record(attribute, attr_hash)
+      end
+
+      return decoded.is_a?(Array) ? result : result.first
+    end
+
+    private
+
+    def serialize_active_record(object)
+      json = object.to_json
+      json = Zlib::Deflate.deflate(json) if options[:gzip]
+      json
+    end
+
+    def deserialize_active_record(attribute, attr_hash)
+      if ActiveRecord::Base.include_root_in_json
+        class_name = attr_hash.keys.first.camelcase
+        attr_hash = attr_hash.values.first
+      end
+      class_name ||= options[:class_name] || attribute.to_s.singularize.camelize
+      class_name.constantize.send(:instantiate, attr_hash)
+    end
+  end
+
   # === Options
   # * +gzip+ - uses gzip before marshalling and unmarshalling. Slight speed hit,
   #   but can save a lot of hard drive space.
@@ -41,33 +89,11 @@ module BetterSerialization
     
     attrs.each do |attribute|
       define_method "#{attribute}=" do |value|
-        json = value.to_json
-        json = Zlib::Deflate.deflate(json) if options[:gzip]
-        super(json)
+        super(JsonSerializer.new(options).to_json(value))
       end
       
       define_method attribute do
-        return nil if self[attribute].nil?
-        
-        json = options[:gzip] ? Zlib::Inflate.inflate(self[attribute]) : self[attribute]
-        decoded = ActiveSupport::JSON.decode(json)
-        
-        return decoded.with_indifferent_access if options[:hash_with_indifferent_access]
-        return decoded if !options[:instantiate]
-        
-        attribute_hashes = [decoded].flatten
-        
-        result = []
-        attribute_hashes.each do |attr_hash|
-          if ActiveRecord::Base.include_root_in_json
-            class_name = attr_hash.keys.first.camelcase
-            attr_hash = attr_hash.values.first
-          end
-          class_name ||= options[:class_name] || attribute.to_s.singularize.camelize
-          result << class_name.constantize.send(:instantiate, attr_hash)
-        end
-        
-        return decoded.is_a?(Array) ? result : result.first
+        JsonSerializer.new(options).from_json(self[attribute])
       end
     end
   end
