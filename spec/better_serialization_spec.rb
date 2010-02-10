@@ -55,6 +55,16 @@ describe BetterSerialization do
       @order_log.customer_cache.attributes.should == @customer.attributes
       @order_log.customer_cache.id.should == @customer.id
     end
+
+    context "on a non-ActiveRecord object" do
+      let(:directory){ Directory.new }
+
+      it "unserializes the same" do
+        person = Person.new(:name => "Simon Phoenix", :age => 75)
+        directory.people = [person]
+        directory.people.first.should == person
+      end
+    end
   end
   
   describe "Marshal serialization" do

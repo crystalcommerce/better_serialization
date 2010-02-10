@@ -17,4 +17,8 @@ ActiveRecord::Schema.define do
     t.integer "product_id"
     t.integer "customer_id"
   end
+
+  create_table :directories do |t|
+    t.binary "people"
+  end
 end

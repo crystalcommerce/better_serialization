@@ -9,7 +9,9 @@ module BetterSerialization
     end
 
     def to_json(object)
-      serialize_active_record(object)
+      json = object.to_json
+      json = Zlib::Deflate.deflate(json) if options[:gzip]
+      json
     end
 
     def from_json(attribute)
@@ -21,31 +23,35 @@ module BetterSerialization
       return decoded.with_indifferent_access if options[:hash_with_indifferent_access]
       return decoded if !options[:instantiate]
 
-      attribute_hashes = [decoded].flatten
-
-      result = []
-      attribute_hashes.each do |attr_hash|
-        result << deserialize_active_record(attribute, attr_hash)
-      end
-
+      result = deserialize(attribute, [decoded].flatten)
       return decoded.is_a?(Array) ? result : result.first
     end
 
     private
 
-    def serialize_active_record(object)
-      json = object.to_json
-      json = Zlib::Deflate.deflate(json) if options[:gzip]
-      json
+    def deserialize(attribute, attribute_hashes)
+      class_name = options[:class_name] || attribe.to_s.singularize.camelize
+      attribute_hashes.inject([]) do |result, attr_hash|
+        if class_name.blank? || class_included?(class_name)
+          class_name = attr_hash.keys.first.camelcase
+          attr_hash = attr_hash.values.first
+        end
+
+        result << create(class_name.constantize, attr_hash.with_indifferent_access)
+      end
     end
 
-    def deserialize_active_record(attribute, attr_hash)
-      if ActiveRecord::Base.include_root_in_json
-        class_name = attr_hash.keys.first.camelcase
-        attr_hash = attr_hash.values.first
+    def class_included?(class_name)
+      class_name.constantize.superclass == ActiveRecord::Base &&
+        ActiveRecord::Base.include_root_in_json
+    end
+
+    def create(klass, attr_hash)
+      if klass.superclass == ActiveRecord::Base
+        klass.send(:instantiate, attr_hash)
+      else
+        klass.send(:new, attr_hash)
       end
-      class_name ||= options[:class_name] || attribute.to_s.singularize.camelize
-      class_name.constantize.send(:instantiate, attr_hash)
     end
   end
 
