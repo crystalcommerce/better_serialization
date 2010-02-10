@@ -15,12 +15,14 @@ module BetterSerialization
     end
 
     def from_json(attribute)
-      return nil if attribute.nil?
+      return options[:default].try(:call) if attribute.nil?
 
       json = options[:gzip] ? Zlib::Inflate.inflate(attribute) : attribute
       decoded = ActiveSupport::JSON.decode(json)
 
-      return decoded.with_indifferent_access if options[:hash_with_indifferent_access]
+      if options[:with_indifferent_access]
+        return decoded.respond_to?(:with_indifferent_access) ? decoded.with_indifferent_access : decoded
+      end
       return decoded if !options[:instantiate]
 
       result = deserialize(attribute, [decoded].flatten)
@@ -30,18 +32,20 @@ module BetterSerialization
     private
 
     def deserialize(attribute, attribute_hashes)
-      class_name = options[:class_name] || attribute.to_s.singularize.camelize
+      class_name = options[:class_name]
       attribute_hashes.inject([]) do |result, attr_hash|
         if class_name.blank? || class_included?(class_name)
           class_name = attr_hash.keys.first.camelcase
           attr_hash = attr_hash.values.first
         end
+        class_name ||=  attribute.to_s.singularize.camelize
 
         result << create(class_name.constantize, attr_hash.with_indifferent_access)
       end
     end
 
     def class_included?(class_name)
+      class_name.present? &&
       class_name.constantize.superclass == ActiveRecord::Base &&
         ActiveRecord::Base.include_root_in_json
     end
@@ -83,9 +87,10 @@ module BetterSerialization
   #   but can save a lot of hard drive space.
   # * +:instantiate+ - if false, it will return the raw decoded json and not attempt to
   #   instantiate ActiveRecord objects. Defaults to true.
-  # * +:hash_with_indifferent_access+ - if true, it will return the raw decoded json as
+  # * +:with_indifferent_access+ - if true, it will return the raw decoded json as
   #   a hash with indifferent access. This can be handy because json doesn't have a concept
   #   of symbols, so it gets annoying when you're using a field as a key-value store
+  # * +:default+ - A proc that gets called when the field is null
   # * +:class_name+ - If ActiveRecord::Base.include_root_in_json is false, you
   #   will need this option so that we can figure out which AR class to instantiate
   #   (not applicable if +raw+ is true)
