@@ -2,6 +2,8 @@
 
 This adds +marshal_serialize+ and +json_serialize+ to ActiveRecord::Base (class methods), which act similar to rails' own +serialize+ except they don't use yaml, which is slooooow and biiiiig (byte-wise). Also supports adding gzip to the serialization process for really large stuff (can save a ton of database memory with minimal added insert time). Note that gzip columns must be of type "binary", "blob", etc (not text).
 
+Note that there's a limitation with the plugin: you can't call destructive actions on attributes using better_serialization (ex. << for an array), and update_attribute etc won't work. See TODO for an explanation.
+
 === Example
 
 see tests, but here's the gist:
@@ -19,14 +21,20 @@ see tests, but here's the gist:
     order_log.product_cache # => normal
     order_log[:product_cache] # => raw Marshal.dump of product
 
-Also, for json_serialize, if <code>ActiveRecord::Base.include_root_in_json != true</code> for your app (this is the new rails defalut, btw) you will need to use the :class_name option if it's not inferable by the association name, and will probably want modify that class's to_json to include the id. It'll all 'just work' if +include_root_in_json+ is set to true though.
+=== Notes for json_serialize
+
+JSON serialization is faster and smaller, but needs more configuration. This is because Marshal and the default YAML serialization dump the whole object, instance variables and all. JSON just stores an instances' attribute values. Thus, you need to tell it what class to instantiate, or tell it not to instantiate anything at all for storing a hash or array of data. 
+
+Also, when serializing ActiveRecord objects, if <code>ActiveRecord::Base.include_root_in_json == true</code> (the new rails defalut), it'll all 'just work'. Otherwise, you will need to use the :class_name option if it's not inferable by the association name, and will probably want modify that class's to_json to include the id.
     
 === The Problem With YAML Serialization: speed and size
 
 [NOTE: this code does not represent the BetterSerialization api, but rather the underlying ideas]
 
-+lis+ is an 18-member array of buylist line items that have misc associations loaded into memory,
-the point being that they're relatively big objects that have resulted from real-world use
+The following examples came from the real-world objects that inspired the plugin.
+
++lis+ is an 18-member array of line items that have many associations loaded into memory,
+the point being that they're relatively big objects.
 
     marshal_data, yaml_data, json_data = nil
 
@@ -87,5 +95,8 @@ If you want speed/small data and don't need to flash-freeze the whole object, us
 === TODO
 
 * deserialization should be cached, and it would be nice if the deserialized value was stored in the attributes hash.
+* Allow destructive actions
+  * The problem is that serializing and de-serializing creates new objects, so if you do object.array_attribute << "blah", you will have deserialized a new object, destructively added a value to it, and thrown the new object away. ActiveRecord avoids this issue by calling to_yaml as a catch-all on the result of read_attribute in activerecord/lib/active_record/connection_adapters/abstract/quoting.rb#quote (as of 2.3.4). What we need is something like being able to specify what AR's catch-all case is (although that wouldn't work for some option/value combos, ex. gzip option on a string or date). Gratefully accepting ideas :)
+  * Also, just thought of another way. have the raw data be in the raw_#{attribute} column, and object.attribute be a method that loads raw_#{attribute}. That + save hooks = win.
 
 Copyright (c) 2009 Woody Peterson, released under the MIT license
