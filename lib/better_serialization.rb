@@ -45,8 +45,15 @@ module BetterSerialization
     end
 
     def class_included?(class_name)
+      active_record = false
+      klass = class_name.constantize.superclass
+      while klass != Object
+        active_record ||= klass == ActiveRecord::Base
+        klass = klass.superclass
+      end
+
       class_name.present? &&
-      class_name.constantize.superclass == ActiveRecord::Base &&
+        active_record &&
         ActiveRecord::Base.include_root_in_json
     end
 
