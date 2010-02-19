@@ -44,21 +44,23 @@ module BetterSerialization
       end
     end
 
-    def class_included?(class_name)
-      active_record = false
-      klass = class_name.constantize.superclass
-      while klass != Object
-        active_record ||= klass == ActiveRecord::Base
-        klass = klass.superclass
+    def active_record?(klass)
+      k = klass.superclass
+      while k != Object
+        return true if k == ActiveRecord::Base
+        k = k.superclass
       end
+      false
+    end
 
+    def class_included?(class_name)
       class_name.present? &&
-        active_record &&
+        active_record?(class_name.constantize) &&
         ActiveRecord::Base.include_root_in_json
     end
 
     def create(klass, attr_hash)
-      if klass.superclass == ActiveRecord::Base
+      if active_record?(klass)
         klass.send(:instantiate, attr_hash)
       else
         klass.send(:new, attr_hash)

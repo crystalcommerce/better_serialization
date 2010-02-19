@@ -56,6 +56,24 @@ describe BetterSerialization do
       @order_log.customer_cache.id.should == @customer.id
     end
 
+    it "includes :id in a subclass of a subclass of ActiveRecord::Base" do
+      context "STI" do
+        before do
+          $DBG = true
+          @customer = PreferredCustomer.new(:name => "Lt. Lenina Huxley")
+          @order_log = OrderLog.new
+        end
+
+        it "includes :id when deserialized" do
+          @customer.save
+
+          @order_log.customer_cache = @customer
+          @order_log.customer_cache.id.should == @customer.id
+          $DBG = false
+        end
+      end
+    end
+
     context "on a non-ActiveRecord object" do
       let(:directory){ Directory.new }
 
