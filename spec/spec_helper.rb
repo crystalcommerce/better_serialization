@@ -1,12 +1,14 @@
+$LOAD_PATH.unshift(File.dirname(__FILE__))
+$LOAD_PATH.unshift(File.join(File.dirname(__FILE__), '..', 'lib'))
 require 'rubygems'
 require 'spec'
-require 'ruby-debug'
-
-$LOAD_PATH.unshift(File.expand_path(File.dirname(__FILE__)))
-
-
+require 'spec/autorun'
 require 'activerecord'
-require File.dirname(__FILE__) + '/../lib/better_serialization'
+require 'better_serialization'
+
+Spec::Runner.configure do |config|
+  
+end
 
 RAILS_ENV="test"
 ActiveRecord::Base.logger = Logger.new(StringIO.new) # make it think it has a logger
