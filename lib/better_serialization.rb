@@ -115,7 +115,13 @@ module BetterSerialization
       define_method attribute do
         JsonSerializer.new(options).from_json(self[attribute])
       end
+
+      (@json_serialized_attributes||={})[attribute.to_s]=options
     end
+  end
+
+  def json_serialized_attributes
+    @json_serialized_attributes || {}
   end
 end
 
