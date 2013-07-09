@@ -1,6 +1,7 @@
 ## MAC OS
 .DS_Store
 
+tmp
 ## TEXTMATE
 *.tmproj
 tmtags
