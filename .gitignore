@@ -1,6 +1,7 @@
 ## MAC OS
 .DS_Store
 
+tmp
 ## TEXTMATE
 *.tmproj
 tmtags
@@ -19,3 +20,4 @@ rdoc
 pkg
 
 ## PROJECT::SPECIFIC
+*.gem
