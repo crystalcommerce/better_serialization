@@ -1,3 +1,9 @@
+=== Only works on Rails 3!
+
+This has been updated to only work on Rails 3.
+
+As well, it was only tested on Ruby 1.9.
+
 === Faster, Smaller, Gzip-able
 
 This adds +marshal_serialize+ and +json_serialize+ to ActiveRecord::Base (class methods), which act similar to rails' own +serialize+ except they don't use yaml, which is slooooow and biiiiig (byte-wise). Also supports adding gzip to the serialization process for really large stuff (can save a ton of database memory with minimal added insert time). Note that gzip columns must be of type "binary", "blob", etc (not text).
