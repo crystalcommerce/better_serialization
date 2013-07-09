@@ -1,4 +1,5 @@
 require 'zlib'
+require_relative 'better_serialization/version'
 
 module BetterSerialization
   class JsonSerializer
