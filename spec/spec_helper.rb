@@ -1,30 +1,24 @@
-$LOAD_PATH.unshift(File.dirname(__FILE__))
-$LOAD_PATH.unshift(File.join(File.dirname(__FILE__), '..', 'lib'))
-require 'rubygems'
-require 'spec'
-require 'spec/autorun'
-require 'activerecord'
-require 'better_serialization'
+require 'bundler/setup'
+require 'rspec/autorun'
 
-Spec::Runner.configure do |config|
-  
-end
+# deps
+require 'sqlite3'
+require 'active_record'
+require_relative '../lib/better_serialization'
+require 'logger'
 
-RAILS_ENV="test"
 ActiveRecord::Base.logger = Logger.new(StringIO.new) # make it think it has a logger
- 
-ActiveRecord::Base.configurations = {
-  "test" => {
-    :adapter => 'sqlite3',
-    :database => ":memory:"
-  }
-}
-ActiveRecord::Base.establish_connection
-silence_stream(STDOUT) {require 'schema'}
+ActiveRecord::Base.establish_connection(
+  :adapter => 'sqlite3',
+  :database => ":memory:"
+)
 
-require "models/order_log"
-require "models/customer"
-require "models/line_item"
-require "models/product"
-require "models/person"
-require "models/directory"
+silence_stream(STDOUT) { require 'schema' }
+
+Dir.glob(File.dirname(__FILE__) + "/models/*.rb").each { |f| require f }
+
+RSpec.configure do |config|
+  config.treat_symbols_as_metadata_keys_with_true_values = true
+  config.filter_run :focus
+  config.run_all_when_everything_filtered = true
+end
