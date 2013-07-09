@@ -73,23 +73,23 @@ module BetterSerialization
   #   but can save a lot of hard drive space.
   def marshal_serialize(*attrs)
     options = attrs.last.is_a?(Hash) ? attrs.pop : {}
-    
+
     attrs.each do |attribute|
       define_method "#{attribute}=" do |value|
         marshalled_value = Marshal.dump(value)
         marshalled_value = Zlib::Deflate.deflate(marshalled_value) if options[:gzip]
         super(marshalled_value)
       end
-      
+
       define_method attribute do
         return nil if self[attribute].nil?
-        
+
         value = Zlib::Inflate.inflate(self[attribute]) if options[:gzip]
         Marshal.load(value || self[attribute])
       end
     end
   end
-  
+
   # === Options
   # options is the last parameter (a hash):
   # * +:gzip+ - uses gzip before and after serialization. Slight speed hit,
@@ -105,23 +105,25 @@ module BetterSerialization
   #   (not applicable if +raw+ is true)
   def json_serialize(*attrs)
     options = attrs.last.is_a?(Hash) ? attrs.pop : {}
-    options = {:instantiate => true}.merge(options)
-    
+    options = {
+      :instantiate => true
+    }.merge(options)
+
     attrs.each do |attribute|
       define_method "#{attribute}=" do |value|
-        super(JsonSerializer.new(options).to_json(value))
+        self[attribute] = JsonSerializer.new(options).to_json(value)
       end
-      
+
       define_method attribute do
         JsonSerializer.new(options).from_json(self[attribute])
       end
 
-      (@json_serialized_attributes||={})[attribute.to_s]=options
+      json_serialized_attributes[attribute.to_s] = options
     end
   end
 
   def json_serialized_attributes
-    @json_serialized_attributes || {}
+    @json_serialized_attributes ||= {}
   end
 end
 
