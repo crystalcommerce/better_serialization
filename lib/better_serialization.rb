@@ -18,7 +18,7 @@ module BetterSerialization
     def from_json(attribute)
       return options[:default].try(:call) if attribute.nil?
 
-      json = options[:gzip] ? Zlib::Inflate.inflate(attribute) : attribute
+      json = deflate(attribute)
       decoded = ActiveSupport::JSON.decode(json)
 
       if options[:with_indifferent_access]
@@ -31,6 +31,20 @@ module BetterSerialization
     end
 
     private
+
+    def deflate(attribute)
+      if options[:gzip]
+        # Backwards compatibility so we can migrate to base64 encoded gzipped
+        # columns.
+        if attribute =~ /\A[A-Za-z0-9+\/\n]+={0,3}\Z/
+          Zlib::Inflate.inflate(Base64.decode64(attribute))
+        else
+          Zlib::Inflate.inflate(attribute)
+        end
+      else
+        attribute
+      end
+    end
 
     def deserialize(attribute, attribute_hashes)
       class_name = options[:class_name]
