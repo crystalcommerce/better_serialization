@@ -6,6 +6,16 @@ describe BetterSerialization do
   let(:product) { Product.new(:name => "Woot", :line_items => [li]) }
   before { li.product = product }
 
+  def swap_include_root_in_json_for(klass, new_value, &block)
+    old_value = klass.include_root_in_json
+    begin
+      klass.include_root_in_json = new_value
+      block.call
+    ensure
+      klass.include_root_in_json = old_value
+    end
+  end
+
   describe "json serialization" do
     let(:customer) { Customer.new(:name => "John Spartan") }
 
@@ -41,6 +51,17 @@ describe BetterSerialization do
 
       order_log[:customer_cache].should == customer.to_json
       order_log.customer_cache.attributes.should == customer.attributes
+    end
+
+    it "works when a model's include_root_in_json disagrees with base's" do
+      swap_include_root_in_json_for(ActiveRecord::Base, false) do
+        swap_include_root_in_json_for(Customer, true) do
+          order_log.customer_cache = customer
+
+          order_log[:customer_cache].should == customer.to_json
+          order_log.customer_cache.attributes.should == customer.attributes
+        end
+      end
     end
 
     it "includes :id in serialization" do

@@ -69,9 +69,10 @@ module BetterSerialization
     end
 
     def class_included?(class_name)
-      class_name.present? &&
-        active_record?(class_name.constantize) &&
-        ActiveRecord::Base.include_root_in_json
+      return false unless class_name.present?
+      klass = class_name.constantize
+      active_record?(class_name.constantize) &&
+        klass.include_root_in_json
     end
 
     def create(klass, attr_hash)
