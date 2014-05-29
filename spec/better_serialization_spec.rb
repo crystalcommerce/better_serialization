@@ -38,8 +38,8 @@ describe BetterSerialization do
 
       order_log.save
       order_log.reload
-      order_log[:line_items_cache].should == @serialized_gzip_li
-      order_log.line_items_cache.first.attributes.should == li.attributes
+      expect(order_log[:line_items_cache]).to eq(@serialized_gzip_li)
+      expect(order_log.line_items_cache.first.attributes).to eq(li.attributes)
 
       OrderLog.marshal_serialize :line_items_cache, :gzip => true
     end
@@ -49,7 +49,7 @@ describe BetterSerialization do
 
       order_log.customer_cache = customer
 
-      order_log[:customer_cache].should == customer.to_json
+      expect(order_log[:customer_cache]).to eq(customer.to_json)
       order_log.customer_cache.attributes.should == customer.attributes
     end
 
@@ -58,7 +58,7 @@ describe BetterSerialization do
         swap_include_root_in_json_for(Customer, true) do
           order_log.customer_cache = customer
 
-          order_log[:customer_cache].should == customer.to_json
+          expect(order_log[:customer_cache]).to eq(customer.to_json)
           order_log.customer_cache.attributes.should == customer.attributes
         end
       end
@@ -70,23 +70,24 @@ describe BetterSerialization do
       order_log.customer_cache = customer
       @serialized_customer = customer.to_json
 
-      order_log.customer_cache.attributes.should == customer.attributes
+      expect(order_log.customer_cache.attributes).to eq(customer.attributes)
       order_log.customer_cache.id.should == customer.id
     end
 
     context "includes :id in a subclass of a subclass of ActiveRecord::Base" do
       context "STI" do
+        let(:customer) { PreferredCustomer.new(:name => "Lt. Lenina Huxley") }
+        let(:order_log) { OrderLog.new }
+
         before do
           $DBG = true
-          customer = PreferredCustomer.new(:name => "Lt. Lenina Huxley")
-          order_log = OrderLog.new
         end
 
         it "includes :id when deserialized" do
           customer.save
 
           order_log.customer_cache = customer
-          order_log.customer_cache.id.should == customer.id
+          expect(order_log.customer_cache.id).to eq(customer.id)
           $DBG = false
         end
       end
