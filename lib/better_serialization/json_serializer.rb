@@ -7,7 +7,7 @@ module BetterSerialization
     end
 
     def to_json(object)
-      json = object.to_json
+      json = object_encoder.new(object).to_json
       json = Zlib::Deflate.deflate(json) if options[:gzip]
       json
     end
@@ -29,6 +29,14 @@ module BetterSerialization
 
     private
 
+    def object_builder
+      options.fetch(:object_builder)
+    end
+
+    def object_encoder
+      options.fetch(:object_encoder)
+    end
+
     def deflate(attribute)
       if options[:gzip]
         # Backwards compatibility so we can migrate to base64 encoded gzipped
@@ -44,39 +52,8 @@ module BetterSerialization
     end
 
     def deserialize(attribute, attribute_hashes)
-      class_name = options[:class_name]
-      attribute_hashes.inject([]) do |result, attr_hash|
-        if class_name.blank? || class_included?(class_name)
-          class_name = attr_hash.keys.first.camelcase
-          attr_hash = attr_hash.values.first
-        end
-        class_name ||=  attribute.to_s.singularize.camelize
-
-        result << create(class_name.constantize, attr_hash.with_indifferent_access)
-      end
-    end
-
-    def active_record?(klass)
-      k = klass.superclass
-      while k != Object
-        return true if k == ActiveRecord::Base
-        k = k.superclass
-      end
-      false
-    end
-
-    def class_included?(class_name)
-      return false unless class_name.present?
-      klass = class_name.constantize
-      active_record?(class_name.constantize) &&
-        klass.include_root_in_json
-    end
-
-    def create(klass, attr_hash)
-      if active_record?(klass)
-        klass.send(:instantiate, attr_hash)
-      else
-        klass.send(:new, attr_hash)
+      attribute_hashes.map do |attr_hash|
+        object_builder.new(attr_hash).build(options.merge(:attribute => attribute))
       end
     end
   end
