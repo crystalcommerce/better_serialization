@@ -21,4 +21,8 @@ ActiveRecord::Schema.define do
   create_table :directories do |t|
     t.binary "people"
   end
+
+  create_table :fish do |t|
+    t.binary "weight"
+  end
 end

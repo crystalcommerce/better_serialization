@@ -102,6 +102,16 @@ describe BetterSerialization do
         directory.people.first.should == person
       end
     end
+
+    context "custom serializer/deserializer" do
+      let(:fish) { Fish.new(:weight => 100) }
+
+      it "serializes roundtrip" do
+        fish.save
+        expect(Fish.find(fish.id).weight).to eq(100)
+        expect(fish[:weight]).to eq(%({"real_talk":10}))
+      end
+    end
   end
 
   describe "Marshal serialization" do
