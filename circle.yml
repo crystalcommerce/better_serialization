@@ -1,5 +1,6 @@
 database:
   override:
+    - echo "NO DATABASE, COMPRENDE?"
 test:
   override:
     - bundle exec rspec spec
